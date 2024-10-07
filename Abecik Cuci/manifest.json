@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Abecik Cuci Web",
-  "version": "1.1",
+  "version": "1.2",
   "description": "Ingat web, ingat Abecik",
   "permissions": [
     "browsingData",
@@ -17,7 +17,8 @@
       "32": "icons/icon32.png",
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
-    }
+    },
+    "default_popup": "popup.html"
   },
   "background": {
     "service_worker": "background.js"

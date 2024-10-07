@@ -1,11 +1,15 @@
-// background.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "cleanAndRefresh") {
+    cleanAndRefresh(request.tab);
+  } else if (request.action === "fullProcess") {
+    fullProcess(request.tab);
+  }
+});
 
-chrome.action.onClicked.addListener((tab) => {
-  // Get the URL of the current tab
+const cleanAndRefresh = (tab) => {
   const url = new URL(tab.url);
   const origin = url.origin;
 
-  // Define what data to remove
   const dataToRemove = {
     cache: true,
     cacheStorage: true,
@@ -17,53 +21,97 @@ chrome.action.onClicked.addListener((tab) => {
     webSQL: true,
   };
 
-  // Set removal options to target the current origin
   const removalOptions = {
     origins: [origin],
     since: 0,
   };
 
-  // Inject code to click the button
-  chrome.scripting.executeScript(
-    {
-      target: { tabId: tab.id },
-      func: () => {
-        const button = document.querySelector(
-          ".wlc-city-hero__vote-btn.btn.btn--vote"
-        );
-        if (button) {
-          button.click();
-          console.log("Button clicked.");
-        } else {
-          console.log("Button not found.");
-        }
+  chrome.browsingData.remove(removalOptions, dataToRemove, () => {
+    chrome.notifications.create(
+      {
+        type: "basic",
+        iconUrl: "icons/icon48.png",
+        title: "Abecik Cuci Web",
+        message: `Data ${origin} sudah di cuci oleh Abecik`,
       },
-    },
-    () => {
-      if (chrome.runtime.lastError) {
-        console.error(chrome.runtime.lastError);
-      } else {
-        // Wait 5 seconds before cleaning data
-        setTimeout(() => {
-          // Remove the data
-          chrome.browsingData.remove(removalOptions, dataToRemove, () => {
-            // Notify the user that data has been cleared
-            chrome.notifications.create(
-              {
-                type: "basic",
-                iconUrl: "icons/icon48.png",
-                title: "Site Data Cleared",
-                message:
-                  "All data for ${origin} has been cleared after clicking the button.",
-              },
-              () => {
-                // Refresh the page after cleaning data
-                chrome.tabs.reload(tab.id);
-              }
-            );
-          });
-        }, 5000); // Wait for 5000 milliseconds (5 seconds)
+      () => {
+        chrome.tabs.reload(tab.id);
+        console.log("Cuci dan refresh completed");
       }
-    }
-  );
-});
+    );
+  });
+};
+
+const fullProcess = (tab) => {
+  let iterations = 0;
+  const maxIterations = 100000;
+
+  const cleanSiteDataAndClickButton = (tab) => {
+    const url = new URL(tab.url);
+    const origin = url.origin;
+
+    const dataToRemove = {
+      cache: true,
+      cacheStorage: true,
+      cookies: true,
+      fileSystems: true,
+      indexedDB: true,
+      localStorage: true,
+      serviceWorkers: true,
+      webSQL: true,
+    };
+
+    const removalOptions = {
+      origins: [origin],
+      since: 0,
+    };
+
+    chrome.scripting.executeScript(
+      {
+        target: { tabId: tab.id },
+        func: () => {
+          const button = document.querySelector(
+            ".wlc-city-hero__vote-btn.btn.btn--vote"
+          );
+          if (button) {
+            button.click();
+            console.log("Abecik sudah Tekan.");
+          } else {
+            console.log("Abecik Hilang");
+          }
+        },
+      },
+      () => {
+        if (chrome.runtime.lastError) {
+          console.error(chrome.runtime.lastError);
+        } else {
+          setTimeout(() => {
+            chrome.browsingData.remove(removalOptions, dataToRemove, () => {
+              chrome.notifications.create(
+                {
+                  type: "basic",
+                  iconUrl: "icons/icon48.png",
+                  title: "Abecik dah cuci",
+                  message: `Data ${origin} sudah di cuci oleh Abecik`,
+                },
+                () => {
+                  iterations++;
+
+                  if (iterations < maxIterations) {
+                    chrome.tabs.reload(tab.id, () => {
+                      setTimeout(() => cleanSiteDataAndClickButton(tab), 5000);
+                    });
+                  } else {
+                    console.log("Prosess 100000 kali run dah setel");
+                  }
+                }
+              );
+            });
+          }, 5000);
+        }
+      }
+    );
+  };
+
+  cleanSiteDataAndClickButton(tab);
+};
